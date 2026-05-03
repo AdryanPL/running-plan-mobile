@@ -1,17 +1,245 @@
 <!doctype html>
-<html lang="pl" class="sl-theme-light">
+<html lang="pl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>8-tygodniowy plan biegowy</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css">
-<link rel="stylesheet" href="styles.css">
+<style>
+:root {
+  --color-background-primary: #FFFFFF;
+  --color-background-secondary: #F4F3EF;
+  --color-background-page: #FAFAF7;
+  --color-text-primary: #24231F;
+  --color-text-secondary: #5F5E5A;
+  --color-border-primary: #8A877F;
+  --color-border-tertiary: #D8D5CC;
+  --border-radius-md: 8px;
+  --border-radius-lg: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background-primary: #1F201D;
+    --color-background-secondary: #282925;
+    --color-background-page: #171814;
+    --color-text-primary: #F2F0E9;
+    --color-text-secondary: #B9B5AA;
+    --color-border-primary: #777369;
+    --color-border-tertiary: #3F3D37;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--color-background-page);
+  color: var(--color-text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-size-adjust: 100%;
+}
+
+button {
+  font: inherit;
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 12px 14px 28px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+#weekTabs {
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding: 0 2px 8px;
+}
+
+#weekTabs button {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+#sessions {
+  grid-template-columns: 1fr !important;
+}
+
+#sessions,
+#weekNote {
+  overflow-wrap: break-word;
+}
+
+.done-control {
+  align-items: center;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  min-height: 44px;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.done-control input {
+  accent-color: #1D9E75;
+  flex: 0 0 auto;
+  height: 20px;
+  margin: 0;
+  width: 20px;
+}
+
+.session-log {
+  border-top: 0.5px solid var(--color-border-tertiary);
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.session-log-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+}
+
+.log-field {
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.log-field input,
+.log-field select,
+.log-field textarea {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  font: inherit;
+  min-height: 44px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.log-field textarea {
+  line-height: 1.4;
+  min-height: 78px;
+  resize: vertical;
+}
+
+.backup-tools {
+  border-top: 0.5px solid var(--color-border-tertiary);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.backup-button {
+  align-items: center;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.backup-button-danger {
+  color: #A33A2C;
+}
+
+.backup-status {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  margin: 8px 0 0;
+  min-height: 18px;
+}
+
+.backup-status-error {
+  color: #A33A2C;
+}
+
+@media (min-width: 680px) {
+  .app-shell {
+    padding: 20px 24px 36px;
+  }
+
+  #weekTabs {
+    flex-wrap: wrap !important;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  #sessions {
+    grid-template-columns: repeat(auto-fit,minmax(240px,1fr)) !important;
+  }
+
+  .session-log-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .log-field-wide {
+    grid-column: 1 / -1;
+  }
+}
+</style>
 </head>
 <body>
 <main class="app-shell">
 <h2 class="sr-only">8-tygodniowy plan biegowy v2 – skalibrowany pod rzeczywiste strefy tętna</h2>
 
-<div class="plan-content">
+<div style="padding:0.5rem 0 1rem;">
 
 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1.25rem;align-items:center;">
   <span style="font-size:12px;color:var(--color-text-secondary);font-weight:500;">Strefy tętna</span>
@@ -28,25 +256,25 @@
   <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary);"><span style="width:9px;height:9px;border-radius:2px;background:#534AB7;display:inline-block;flex-shrink:0;"></span>Długie rozbieganie</span>
 </div>
 
-<div id="weekTabs"></div>
-<div id="weekHeader"></div>
-<div id="sessions"></div>
-<div id="weekNote"></div>
+<div id="weekTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;"></div>
+<div id="weekHeader" style="margin-bottom:1rem;"></div>
+<div id="sessions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:1rem;"></div>
+<div id="weekNote" style="margin-bottom:1.5rem;"></div>
 
-<div class="chart-section">
-  <p class="chart-title">Objętość tygodniowa (minuty łącznie)</p>
-  <div class="chart-frame">
+<div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:1rem;">
+  <p style="font-size:12px;color:var(--color-text-secondary);margin:0 0 10px;">Objętość tygodniowa (minuty łącznie)</p>
+  <div style="position:relative;width:100%;height:170px;">
     <canvas id="volChart" role="img"></canvas>
   </div>
 </div>
 
 <div class="backup-tools">
-  <p class="backup-title">Kopia danych</p>
+  <p style="font-size:12px;color:var(--color-text-secondary);margin:0 0 10px;">Kopia danych</p>
   <div class="backup-actions">
-    <sl-button size="medium" onclick="exportLogs()">Eksportuj dane</sl-button>
-    <sl-button size="medium" onclick="document.getElementById('backupImport').click()">Importuj dane</sl-button>
-    <input id="backupImport" class="sr-only" type="file" accept="application/json,.json" onchange="handleBackupImport(event)">
-    <sl-button size="medium" variant="danger" onclick="clearLocalData()">Usuń dane lokalne</sl-button>
+    <button class="backup-button" type="button" onclick="exportLogs()">Eksportuj dane</button>
+    <label class="backup-button" for="backupImport">Importuj dane</label>
+    <input id="backupImport" type="file" accept="application/json,.json" onchange="handleBackupImport(event)" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;padding:0;margin:-1px;">
+    <button class="backup-button backup-button-danger" type="button" onclick="clearLocalData()">Usuń dane lokalne</button>
   </div>
   <p id="backupStatus" class="backup-status" aria-live="polite"></p>
 </div>
@@ -54,7 +282,6 @@
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
 <script>
 const TC = {"easy-strides":"#1D9E75","fartlek":"#BA7517","tempo-finish":"#185FA5","long":"#534AB7"};
 
@@ -368,7 +595,13 @@ function renderWeekHeader() {
 
 function renderTabs() {
   document.getElementById('weekTabs').innerHTML = WEEKS.map((w,i) => `
-    <sl-button size="small" variant="${i===cur?'primary':'default'}" ${i===cur?'':'outline'} onclick="go(${i})">T${i+1}${w.deload?' ↓':''}</sl-button>
+    <button onclick="go(${i})" style="
+      font-size:12px;padding:5px 13px;border-radius:var(--border-radius-md);
+      border:0.5px solid var(--color-border-${i===cur?'primary':'tertiary'});
+      background:${i===cur?'var(--color-background-secondary)':'transparent'};
+      color:${i===cur?'var(--color-text-primary)':'var(--color-text-secondary)'};
+      cursor:pointer;font-weight:${i===cur?'500':'400'};
+    ">T${i+1}${w.deload?' ↓':''}</button>
   `).join('');
 }
 
@@ -384,20 +617,18 @@ function renderWeek() {
           <option value="${value}" ${sessionLog.rpe === value?'selected':''}>${value}</option>
         `).join('');
     return `
-    <sl-card class="session-card${done?' session-card-done':''}">
-      <div slot="header" class="session-card-header">
-        <div class="session-card-meta">
-          <span>${s.day}</span>
-          <span>${s.duration} min</span>
-        </div>
-        <label class="done-control" for="${checkboxId}">
-          <input id="${checkboxId}" type="checkbox" ${done?'checked':''} onchange="toggleSessionDone(cur,${sessionIndex},this.checked)">
-          <span>Wykonane</span>
-        </label>
+    <div style="background:${done?'var(--color-background-secondary)':'var(--color-background-primary)'};border:0.5px solid ${done?'#1D9E75':'var(--color-border-tertiary)'};border-radius:var(--border-radius-lg);padding:1rem 1.1rem;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:12px;color:var(--color-text-secondary);">${s.day}</span>
+        <span style="font-size:12px;color:var(--color-text-secondary);">${s.duration} min</span>
       </div>
-      <div class="session-card-title">
-        <span class="session-type-dot" style="background:${TC[s.type]};"></span>
-        <span>${s.title}</span>
+      <label class="done-control" for="${checkboxId}">
+        <input id="${checkboxId}" type="checkbox" ${done?'checked':''} onchange="toggleSessionDone(cur,${sessionIndex},this.checked)">
+        <span>Wykonane</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${TC[s.type]};flex-shrink:0;display:inline-block;"></span>
+        <span style="font-size:14px;font-weight:500;color:var(--color-text-primary);">${s.title}</span>
       </div>
       <div class="session-log">
         <div class="session-log-grid">
@@ -423,10 +654,10 @@ function renderWeek() {
           </label>
         </div>
       </div>
-      <div class="session-card-details">
-        ${s.detail.map(d => `<div class="session-card-detail"><span class="session-detail-bullet" style="color:${TC[s.type]};">·</span><span>${d}</span></div>`).join('')}
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        ${s.detail.map(d => `<div style="display:flex;gap:6px;font-size:13px;color:var(--color-text-secondary);"><span style="color:${TC[s.type]};flex-shrink:0;margin-top:1px;">·</span><span>${d}</span></div>`).join('')}
       </div>
-    </sl-card>
+    </div>
   `;
   }).join('');
 
@@ -441,9 +672,10 @@ function renderWeek() {
 function go(i) { cur=i; renderTabs(); renderWeek(); }
 renderTabs(); renderWeek();
 
+const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 const labels = WEEKS.map((_,i)=>`T${i+1}`);
 const vols = WEEKS.map(getWeekPlannedMinutes);
-const bgColors = WEEKS.map(w=>w.deload ? '#B4B2A9' : '#1D9E75');
+const bgColors = WEEKS.map(w=>w.deload ? (isDark?'#444441':'#B4B2A9') : (isDark?'#5DCAA5':'#1D9E75'));
 const volChart = document.getElementById('volChart');
 const volChartSummary = labels.map((label,i)=>`${label} ${vols[i]}`).join(', ');
 volChart.setAttribute('aria-label', `Wykres słupkowy objętości: ${volChartSummary} minut`);
@@ -463,8 +695,8 @@ new Chart(volChart,{
       tooltip:{callbacks:{label:ctx=>`${ctx.raw} min`}}
     },
     scales:{
-      x:{ticks:{color:'#5F5E5A',font:{size:11}},grid:{display:false},border:{display:false}},
-      y:{ticks:{color:'#5F5E5A',font:{size:11},stepSize:20},grid:{color:'rgba(0,0,0,0.06)'},border:{display:false},min:80}
+      x:{ticks:{color:isDark?'#888780':'#5F5E5A',font:{size:11}},grid:{display:false},border:{display:false}},
+      y:{ticks:{color:isDark?'#888780':'#5F5E5A',font:{size:11},stepSize:20},grid:{color:isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)'},border:{display:false},min:80}
     }
   }
 });

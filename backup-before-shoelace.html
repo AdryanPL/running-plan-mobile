@@ -1,10 +1,9 @@
 <!doctype html>
-<html lang="pl" class="sl-theme-light">
+<html lang="pl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>8-tygodniowy plan biegowy</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -43,10 +42,10 @@
 <div class="backup-tools">
   <p class="backup-title">Kopia danych</p>
   <div class="backup-actions">
-    <sl-button size="medium" onclick="exportLogs()">Eksportuj dane</sl-button>
-    <sl-button size="medium" onclick="document.getElementById('backupImport').click()">Importuj dane</sl-button>
+    <button class="backup-button" type="button" onclick="exportLogs()">Eksportuj dane</button>
+    <label class="backup-button" for="backupImport">Importuj dane</label>
     <input id="backupImport" class="sr-only" type="file" accept="application/json,.json" onchange="handleBackupImport(event)">
-    <sl-button size="medium" variant="danger" onclick="clearLocalData()">Usuń dane lokalne</sl-button>
+    <button class="backup-button backup-button-danger" type="button" onclick="clearLocalData()">Usuń dane lokalne</button>
   </div>
   <p id="backupStatus" class="backup-status" aria-live="polite"></p>
 </div>
@@ -54,7 +53,6 @@
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
 <script>
 const TC = {"easy-strides":"#1D9E75","fartlek":"#BA7517","tempo-finish":"#185FA5","long":"#534AB7"};
 
@@ -368,7 +366,13 @@ function renderWeekHeader() {
 
 function renderTabs() {
   document.getElementById('weekTabs').innerHTML = WEEKS.map((w,i) => `
-    <sl-button size="small" variant="${i===cur?'primary':'default'}" ${i===cur?'':'outline'} onclick="go(${i})">T${i+1}${w.deload?' ↓':''}</sl-button>
+    <button onclick="go(${i})" style="
+      font-size:12px;padding:5px 13px;border-radius:var(--border-radius-md);
+      border:0.5px solid var(--color-border-${i===cur?'primary':'tertiary'});
+      background:${i===cur?'var(--color-background-secondary)':'transparent'};
+      color:${i===cur?'var(--color-text-primary)':'var(--color-text-secondary)'};
+      cursor:pointer;font-weight:${i===cur?'500':'400'};
+    ">T${i+1}${w.deload?' ↓':''}</button>
   `).join('');
 }
 
@@ -384,20 +388,18 @@ function renderWeek() {
           <option value="${value}" ${sessionLog.rpe === value?'selected':''}>${value}</option>
         `).join('');
     return `
-    <sl-card class="session-card${done?' session-card-done':''}">
-      <div slot="header" class="session-card-header">
-        <div class="session-card-meta">
-          <span>${s.day}</span>
-          <span>${s.duration} min</span>
-        </div>
-        <label class="done-control" for="${checkboxId}">
-          <input id="${checkboxId}" type="checkbox" ${done?'checked':''} onchange="toggleSessionDone(cur,${sessionIndex},this.checked)">
-          <span>Wykonane</span>
-        </label>
+    <div style="background:${done?'var(--color-background-secondary)':'var(--color-background-primary)'};border:0.5px solid ${done?'#1D9E75':'var(--color-border-tertiary)'};border-radius:var(--border-radius-lg);padding:1rem 1.1rem;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:12px;color:var(--color-text-secondary);">${s.day}</span>
+        <span style="font-size:12px;color:var(--color-text-secondary);">${s.duration} min</span>
       </div>
-      <div class="session-card-title">
-        <span class="session-type-dot" style="background:${TC[s.type]};"></span>
-        <span>${s.title}</span>
+      <label class="done-control" for="${checkboxId}">
+        <input id="${checkboxId}" type="checkbox" ${done?'checked':''} onchange="toggleSessionDone(cur,${sessionIndex},this.checked)">
+        <span>Wykonane</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${TC[s.type]};flex-shrink:0;display:inline-block;"></span>
+        <span style="font-size:14px;font-weight:500;color:var(--color-text-primary);">${s.title}</span>
       </div>
       <div class="session-log">
         <div class="session-log-grid">
@@ -423,10 +425,10 @@ function renderWeek() {
           </label>
         </div>
       </div>
-      <div class="session-card-details">
-        ${s.detail.map(d => `<div class="session-card-detail"><span class="session-detail-bullet" style="color:${TC[s.type]};">·</span><span>${d}</span></div>`).join('')}
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        ${s.detail.map(d => `<div style="display:flex;gap:6px;font-size:13px;color:var(--color-text-secondary);"><span style="color:${TC[s.type]};flex-shrink:0;margin-top:1px;">·</span><span>${d}</span></div>`).join('')}
       </div>
-    </sl-card>
+    </div>
   `;
   }).join('');
 
@@ -441,9 +443,10 @@ function renderWeek() {
 function go(i) { cur=i; renderTabs(); renderWeek(); }
 renderTabs(); renderWeek();
 
+const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 const labels = WEEKS.map((_,i)=>`T${i+1}`);
 const vols = WEEKS.map(getWeekPlannedMinutes);
-const bgColors = WEEKS.map(w=>w.deload ? '#B4B2A9' : '#1D9E75');
+const bgColors = WEEKS.map(w=>w.deload ? (isDark?'#444441':'#B4B2A9') : (isDark?'#5DCAA5':'#1D9E75'));
 const volChart = document.getElementById('volChart');
 const volChartSummary = labels.map((label,i)=>`${label} ${vols[i]}`).join(', ');
 volChart.setAttribute('aria-label', `Wykres słupkowy objętości: ${volChartSummary} minut`);
@@ -463,8 +466,8 @@ new Chart(volChart,{
       tooltip:{callbacks:{label:ctx=>`${ctx.raw} min`}}
     },
     scales:{
-      x:{ticks:{color:'#5F5E5A',font:{size:11}},grid:{display:false},border:{display:false}},
-      y:{ticks:{color:'#5F5E5A',font:{size:11},stepSize:20},grid:{color:'rgba(0,0,0,0.06)'},border:{display:false},min:80}
+      x:{ticks:{color:isDark?'#888780':'#5F5E5A',font:{size:11}},grid:{display:false},border:{display:false}},
+      y:{ticks:{color:isDark?'#888780':'#5F5E5A',font:{size:11},stepSize:20},grid:{color:isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)'},border:{display:false},min:80}
     }
   }
 });

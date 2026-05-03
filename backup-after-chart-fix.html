@@ -1,17 +1,7 @@
-<!doctype html>
-<html lang="pl" class="sl-theme-light">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>8-tygodniowy plan biegowy</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css">
-<link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<main class="app-shell">
+
 <h2 class="sr-only">8-tygodniowy plan biegowy v2 – skalibrowany pod rzeczywiste strefy tętna</h2>
 
-<div class="plan-content">
+<div style="padding:0.5rem 0 1rem;">
 
 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1.25rem;align-items:center;">
   <span style="font-size:12px;color:var(--color-text-secondary);font-weight:500;">Strefy tętna</span>
@@ -28,33 +18,20 @@
   <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary);"><span style="width:9px;height:9px;border-radius:2px;background:#534AB7;display:inline-block;flex-shrink:0;"></span>Długie rozbieganie</span>
 </div>
 
-<div id="weekTabs"></div>
-<div id="weekHeader"></div>
-<div id="sessions"></div>
-<div id="weekNote"></div>
+<div id="weekTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;"></div>
+<div id="weekHeader" style="margin-bottom:1rem;"></div>
+<div id="sessions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:1rem;"></div>
+<div id="weekNote" style="margin-bottom:1.5rem;"></div>
 
-<div class="chart-section">
-  <p class="chart-title">Objętość tygodniowa (minuty łącznie)</p>
-  <div class="chart-frame">
+<div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:1rem;">
+  <p style="font-size:12px;color:var(--color-text-secondary);margin:0 0 10px;">Objętość tygodniowa (minuty łącznie)</p>
+  <div style="position:relative;width:100%;height:170px;">
     <canvas id="volChart" role="img"></canvas>
   </div>
 </div>
-
-<div class="backup-tools">
-  <p class="backup-title">Kopia danych</p>
-  <div class="backup-actions">
-    <sl-button size="medium" onclick="exportLogs()">Eksportuj dane</sl-button>
-    <sl-button size="medium" onclick="document.getElementById('backupImport').click()">Importuj dane</sl-button>
-    <input id="backupImport" class="sr-only" type="file" accept="application/json,.json" onchange="handleBackupImport(event)">
-    <sl-button size="medium" variant="danger" onclick="clearLocalData()">Usuń dane lokalne</sl-button>
-  </div>
-  <p id="backupStatus" class="backup-status" aria-live="polite"></p>
 </div>
-</div>
-</main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
 <script>
 const TC = {"easy-strides":"#1D9E75","fartlek":"#BA7517","tempo-finish":"#185FA5","long":"#534AB7"};
 
@@ -174,261 +151,49 @@ const WEEKS = [
 ];
 
 let cur = 0;
-const LOGS_STORAGE_KEY = 'runningPlan.v1.logs';
 
 function getWeekPlannedMinutes(week) {
   return week.sessions.reduce((sum,session)=>sum + session.duration,0);
 }
 
-function createEmptyLogs() {
-  return {version:1,sessions:{}};
+function renderTabs() {
+  document.getElementById('weekTabs').innerHTML = WEEKS.map((w,i) => `
+    <button onclick="go(${i})" style="
+      font-size:12px;padding:5px 13px;border-radius:var(--border-radius-md);
+      border:0.5px solid var(--color-border-${i===cur?'primary':'tertiary'});
+      background:${i===cur?'var(--color-background-secondary)':'transparent'};
+      color:${i===cur?'var(--color-text-primary)':'var(--color-text-secondary)'};
+      cursor:pointer;font-weight:${i===cur?'500':'400'};
+    ">T${i+1}${w.deload?' ↓':''}</button>
+  `).join('');
 }
 
-function loadLogs() {
-  try {
-    const raw = window.localStorage.getItem(LOGS_STORAGE_KEY);
-    if (!raw) return createEmptyLogs();
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || !parsed.sessions || typeof parsed.sessions !== 'object') {
-      return createEmptyLogs();
-    }
-    return {version:1,sessions:parsed.sessions};
-  } catch (error) {
-    return createEmptyLogs();
-  }
-}
-
-let logs = loadLogs();
-
-function saveLogs() {
-  try {
-    window.localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(logs));
-  } catch (error) {}
-}
-
-function setBackupStatus(message,isError=false) {
-  const status = document.getElementById('backupStatus');
-  if (!status) return;
-  status.textContent = message;
-  status.className = `backup-status${isError ? ' backup-status-error' : ''}`;
-}
-
-function getBackupFileName() {
-  const today = new Date().toISOString().slice(0,10);
-  return `running-plan-backup-${today}.json`;
-}
-
-function validateImportedLogs(data) {
-  return Boolean(
-    data &&
-    typeof data === 'object' &&
-    !Array.isArray(data) &&
-    Object.prototype.hasOwnProperty.call(data,'version') &&
-    data.sessions &&
-    typeof data.sessions === 'object' &&
-    !Array.isArray(data.sessions)
-  );
-}
-
-function exportLogs() {
-  let data = createEmptyLogs();
-  try {
-    const raw = window.localStorage.getItem(LOGS_STORAGE_KEY);
-    data = raw ? JSON.parse(raw) : createEmptyLogs();
-  } catch (error) {
-    data = createEmptyLogs();
-  }
-
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = getBackupFileName();
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  setBackupStatus('Eksport danych gotowy.');
-}
-
-function importLogsFromFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(reader.result);
-      if (!validateImportedLogs(parsed)) {
-        setBackupStatus('Nieprawidłowy plik kopii danych.',true);
-        return;
-      }
-      logs = {version:parsed.version,sessions:parsed.sessions};
-      saveLogs();
-      renderWeek();
-      setBackupStatus('Dane zostały zaimportowane.');
-    } catch (error) {
-      setBackupStatus('Nie udało się odczytać pliku JSON.',true);
-    }
-  };
-  reader.onerror = () => setBackupStatus('Nie udało się odczytać pliku.',true);
-  reader.readAsText(file);
-}
-
-function handleBackupImport(event) {
-  importLogsFromFile(event.target.files[0]);
-  event.target.value = '';
-}
-
-function clearLocalData() {
-  if (!window.confirm('Usunąć wszystkie lokalne dane treningów?')) return;
-  try {
-    window.localStorage.removeItem(LOGS_STORAGE_KEY);
-  } catch (error) {}
-  logs = createEmptyLogs();
-  renderWeek();
-  setBackupStatus('Dane lokalne zostały usunięte.');
-}
-
-function getSessionLogId(week,sessionIndex) {
-  return `w${week.week}.s${sessionIndex}`;
-}
-
-function getSessionLog(week,sessionIndex) {
-  const sessionLog = logs.sessions[getSessionLogId(week,sessionIndex)];
-  return sessionLog && typeof sessionLog === 'object' ? sessionLog : {};
-}
-
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'":'&#39;'
-  })[char]);
-}
-
-function isSessionDone(week,sessionIndex) {
-  const sessionLog = getSessionLog(week,sessionIndex);
-  return Boolean(sessionLog && sessionLog.done);
-}
-
-function setSessionDone(week,sessionIndex,done) {
-  const sessionId = getSessionLogId(week,sessionIndex);
-  logs.sessions[sessionId] = {...getSessionLog(week,sessionIndex),done:Boolean(done)};
-  saveLogs();
-}
-
-function updateSessionLogField(weekIndex,sessionIndex,field,value) {
-  const week = WEEKS[weekIndex];
-  const sessionId = getSessionLogId(week,sessionIndex);
-  logs.sessions[sessionId] = {...getSessionLog(week,sessionIndex),[field]:value};
-  saveLogs();
-  renderWeekHeader();
-}
-
-function getWeekDoneCount(week) {
-  return week.sessions.reduce((count,session,sessionIndex)=>count + (isSessionDone(week,sessionIndex) ? 1 : 0),0);
-}
-
-function getWeekActualMinutes(week) {
-  return week.sessions.reduce((sum,session,sessionIndex) => {
-    const value = Number.parseFloat(getSessionLog(week,sessionIndex).actualMinutes);
-    return Number.isFinite(value) && value > 0 ? sum + value : sum;
-  },0);
-}
-
-function formatMinutes(value) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-function getWeekProgressText(week) {
-  const doneCount = getWeekDoneCount(week);
-  const actualMinutes = getWeekActualMinutes(week);
-  const minutesText = actualMinutes > 0 ? ` · wykonane ${formatMinutes(actualMinutes)} min` : '';
-  return `Postęp: ${doneCount}/${week.sessions.length} treningi${minutesText}`;
-}
-
-function toggleSessionDone(weekIndex,sessionIndex,done) {
-  setSessionDone(WEEKS[weekIndex],sessionIndex,done);
-  renderWeek();
-}
-
-function renderWeekHeader() {
+function renderWeek() {
   const w = WEEKS[cur];
   const plannedMinutes = getWeekPlannedMinutes(w);
   document.getElementById('weekHeader').innerHTML = `
     <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:2px;">
       <span style="font-size:17px;font-weight:500;color:var(--color-text-primary);">${w.theme}</span>
       <span style="font-size:12px;color:var(--color-text-secondary);">${plannedMinutes} min łącznie</span>
-      <span style="font-size:12px;color:var(--color-text-secondary);">${getWeekProgressText(w)}</span>
       ${w.deload?`<span style="font-size:11px;padding:2px 8px;border-radius:999px;border:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);">tydzień rozbiegowy</span>`:''}
     </div>
   `;
-}
 
-function renderTabs() {
-  document.getElementById('weekTabs').innerHTML = WEEKS.map((w,i) => `
-    <sl-button size="small" variant="${i===cur?'primary':'default'}" ${i===cur?'':'outline'} onclick="go(${i})">T${i+1}${w.deload?' ↓':''}</sl-button>
+  document.getElementById('sessions').innerHTML = w.sessions.map(s => `
+    <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.1rem;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:12px;color:var(--color-text-secondary);">${s.day}</span>
+        <span style="font-size:12px;color:var(--color-text-secondary);">${s.duration} min</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${TC[s.type]};flex-shrink:0;display:inline-block;"></span>
+        <span style="font-size:14px;font-weight:500;color:var(--color-text-primary);">${s.title}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        ${s.detail.map(d => `<div style="display:flex;gap:6px;font-size:12px;color:var(--color-text-secondary);"><span style="color:${TC[s.type]};flex-shrink:0;margin-top:1px;">·</span><span>${d}</span></div>`).join('')}
+      </div>
+    </div>
   `).join('');
-}
-
-function renderWeek() {
-  const w = WEEKS[cur];
-  renderWeekHeader();
-
-  document.getElementById('sessions').innerHTML = w.sessions.map((s,sessionIndex) => {
-    const done = isSessionDone(w,sessionIndex);
-    const sessionLog = getSessionLog(w,sessionIndex);
-    const checkboxId = `done-${getSessionLogId(w,sessionIndex).replace('.', '-')}`;
-    const rpeOptions = [''].concat(Array.from({length:10},(_,i)=>String(i+1))).map(value => `
-          <option value="${value}" ${sessionLog.rpe === value?'selected':''}>${value}</option>
-        `).join('');
-    return `
-    <sl-card class="session-card${done?' session-card-done':''}">
-      <div slot="header" class="session-card-header">
-        <div class="session-card-meta">
-          <span>${s.day}</span>
-          <span>${s.duration} min</span>
-        </div>
-        <label class="done-control" for="${checkboxId}">
-          <input id="${checkboxId}" type="checkbox" ${done?'checked':''} onchange="toggleSessionDone(cur,${sessionIndex},this.checked)">
-          <span>Wykonane</span>
-        </label>
-      </div>
-      <div class="session-card-title">
-        <span class="session-type-dot" style="background:${TC[s.type]};"></span>
-        <span>${s.title}</span>
-      </div>
-      <div class="session-log">
-        <div class="session-log-grid">
-          <label class="log-field">
-            <span>RPE</span>
-            <select onchange="updateSessionLogField(cur,${sessionIndex},'rpe',this.value)">${rpeOptions}</select>
-          </label>
-          <label class="log-field">
-            <span>Czas wykonany (min)</span>
-            <input type="number" inputmode="numeric" min="0" step="1" value="${escapeHtml(sessionLog.actualMinutes)}" oninput="updateSessionLogField(cur,${sessionIndex},'actualMinutes',this.value)">
-          </label>
-          <label class="log-field">
-            <span>Śr. tętno</span>
-            <input type="number" inputmode="numeric" min="0" step="1" value="${escapeHtml(sessionLog.avgHr)}" oninput="updateSessionLogField(cur,${sessionIndex},'avgHr',this.value)">
-          </label>
-          <label class="log-field">
-            <span>Śr. tempo</span>
-            <input type="text" inputmode="text" placeholder="6:18" value="${escapeHtml(sessionLog.avgPace)}" oninput="updateSessionLogField(cur,${sessionIndex},'avgPace',this.value)">
-          </label>
-          <label class="log-field log-field-wide">
-            <span>Notatka po treningu</span>
-            <textarea oninput="updateSessionLogField(cur,${sessionIndex},'note',this.value)">${escapeHtml(sessionLog.note)}</textarea>
-          </label>
-        </div>
-      </div>
-      <div class="session-card-details">
-        ${s.detail.map(d => `<div class="session-card-detail"><span class="session-detail-bullet" style="color:${TC[s.type]};">·</span><span>${d}</span></div>`).join('')}
-      </div>
-    </sl-card>
-  `;
-  }).join('');
 
   document.getElementById('weekNote').innerHTML = `
     <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:0.9rem 1.1rem;background:var(--color-background-secondary);">
@@ -441,9 +206,10 @@ function renderWeek() {
 function go(i) { cur=i; renderTabs(); renderWeek(); }
 renderTabs(); renderWeek();
 
+const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 const labels = WEEKS.map((_,i)=>`T${i+1}`);
 const vols = WEEKS.map(getWeekPlannedMinutes);
-const bgColors = WEEKS.map(w=>w.deload ? '#B4B2A9' : '#1D9E75');
+const bgColors = WEEKS.map(w=>w.deload ? (isDark?'#444441':'#B4B2A9') : (isDark?'#5DCAA5':'#1D9E75'));
 const volChart = document.getElementById('volChart');
 const volChartSummary = labels.map((label,i)=>`${label} ${vols[i]}`).join(', ');
 volChart.setAttribute('aria-label', `Wykres słupkowy objętości: ${volChartSummary} minut`);
@@ -463,11 +229,9 @@ new Chart(volChart,{
       tooltip:{callbacks:{label:ctx=>`${ctx.raw} min`}}
     },
     scales:{
-      x:{ticks:{color:'#5F5E5A',font:{size:11}},grid:{display:false},border:{display:false}},
-      y:{ticks:{color:'#5F5E5A',font:{size:11},stepSize:20},grid:{color:'rgba(0,0,0,0.06)'},border:{display:false},min:80}
+      x:{ticks:{color:isDark?'#888780':'#5F5E5A',font:{size:11}},grid:{display:false},border:{display:false}},
+      y:{ticks:{color:isDark?'#888780':'#5F5E5A',font:{size:11},stepSize:20},grid:{color:isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)'},border:{display:false},min:80}
     }
   }
 });
 </script>
-</body>
-</html>
